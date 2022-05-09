@@ -17,7 +17,6 @@ OUTPUT_DIM = 1
 DATASET_PATH = "dataset"
 RESULT_PATH = "result"
 FILTER_SIZES = [1, 2, 3]
-MAX_NONASCENDING = 5
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 f1 = torchmetrics.F1Score(threshold=0.5).to(device)
@@ -51,7 +50,7 @@ def train_model(model: nn.Module, config, iterator, optimizer: optim.Optimizer, 
         if config.model == "LSTM":
             predictions = model(batch.text[0].to(device), batch.text[1].to(device))
         elif config.model == "CNN":
-            predictions = model(batch.text).squeeze(1)
+            predictions = model(batch.text.to(device)).squeeze(1)
         
         loss = criterion(predictions, batch.label.to(device))
         acc, f1 = get_metrics(predictions, batch.label.to(device))
@@ -78,7 +77,7 @@ def evaluate_model(model: nn.Module, config, iterator, criterion):
             if config.model == "LSTM":
                 predictions = model(batch.text[0].to(device), batch.text[1].to(device))
             elif config.model == "CNN":
-                predictions = model(batch.text).squeeze(1)
+                predictions = model(batch.text.to(device)).squeeze(1)
 
             acc, f1 = get_metrics(predictions, batch.label.to(device))
 
@@ -152,13 +151,11 @@ def init_model(config) -> Tuple[nn.Module, optim.Optimizer, nn.BCEWithLogitsLoss
 def train(config):
     rnn, optimizer, criterion, train_iterator, valid_iterator, test_iterator = init_model(config)
     best_acc = -1
-    best_epoch, total_epoch = -1, 0
+    best_epoch = -1
 
     save_path = get_save_path(config, "pt")
 
     for e in range(config.epoch_num):
-        total_epoch += 1
-
         start_t = time.time()
         train_acc, train_f1 = train_model(rnn, config, train_iterator, optimizer, criterion)
         valid_acc, valid_f1 = evaluate_model(rnn, config, valid_iterator, criterion)
@@ -173,15 +170,11 @@ def train(config):
         print(f'  Train F1: {train_f1:.3f} | Train Acc: {train_acc*100:.2f}%')
         print(f'   Val. F1: {valid_f1:.3f} |  Val. Acc: {valid_acc*100:.2f}%')
 
-        if e - best_epoch > MAX_NONASCENDING:
-            print(f"Exit at epoch {total_epoch}")
-            break
-
     rnn.load_state_dict(torch.load(save_path))
     test_acc, test_f1 = evaluate_model(rnn, config, test_iterator, criterion)
     print(f'\nTest F1: {test_f1:.3f} | Test Acc: {test_acc*100:.2f}%')
 
-    return test_acc, test_f1, best_epoch, total_epoch
+    return test_acc, test_f1, best_epoch
 
 
 def main(argv):
@@ -203,15 +196,18 @@ def main(argv):
     
     print("")
     
+    torch.backends.cudnn.deterministic = True
+    
     start = time.time()
-    test_acc, test_f1, best_epoch, total_epoch = train(config)
+    test_acc, test_f1, best_epoch = train(config)
     end = time.time()
 
     with open(get_save_path(config, "txt"), "w") as file:
         for k, v in config.__dict__.items():
             file.write(f"{k}: {v}\n")
 
-        file.write(f"\nBest epoch: {best_epoch}/{total_epoch}, Acc: {test_acc}, F1: {test_f1}, Time: {end - start}secs")
+        file.write(f"\nBest epoch: {best_epoch}, Acc: {test_acc}, F1: {test_f1}," \
+            f"Time: {end - start} secs, Avg time: {(end - start) / config.epoch_num} secs")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
