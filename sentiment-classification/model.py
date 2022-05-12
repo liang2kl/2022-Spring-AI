@@ -17,7 +17,7 @@ class LSTM(nn.Module):
         )
         
         self.dropout = nn.Dropout(config.dropout)
-        self.fc = nn.Linear(config.hidden_dim * (2 if config.bidirectional else 1), output_dim)
+        self.linear = nn.Linear(config.hidden_dim * (2 if config.bidirectional else 1), output_dim)
 
     def forward(self, text, text_lengths):
         embedded = self.dropout(self.embedding(text))
@@ -29,7 +29,7 @@ class LSTM(nn.Module):
         else:
             hidden = self.dropout(hidden.squeeze(0))
         
-        result = self.fc(hidden)
+        result = self.linear(hidden)
         return result[-1].squeeze(1) if result.dim() == 3 else result.squeeze(1)
 
 
@@ -46,25 +46,18 @@ class CNN(nn.Module):
                 kernel_size = (fs, embedding_dim)) 
             for fs in filter_sizes])
         
-        self.fc = nn.Linear(len(filter_sizes) * config.filter_num, output_dim)
+        self.linear = nn.Linear(len(filter_sizes) * config.filter_num, output_dim)
         
         self.dropout = nn.Dropout(config.dropout)
         
     def forward(self, text):
-        # text = [batch size, sent len]
-        # embedded = [batch size, sent len, emb dim]
         embedded = self.embedding(text)
-
-        # embedded = [batch size, 1, sent len, emb dim]
         embedded = embedded.unsqueeze(1)
         
-        # conved_n = [batch size, filter_num, sent len - filter_sizes[n] + 1]
         conved = [F.relu(conv(embedded)).squeeze(3) for conv in self.convs]
         
-        # pooled_n = [batch size, filter_num]
         pooled = [F.max_pool1d(conv, conv.shape[2]).squeeze(2) for conv in conved]
         
-        # cat = [batch size, n_filters * len(filter_sizes)]
         cat = self.dropout(torch.cat(pooled, dim = 1))
 
-        return self.fc(cat)
+        return self.linear(cat)

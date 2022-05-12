@@ -167,8 +167,8 @@ def train(config):
             torch.save(rnn.state_dict(), save_path)
         
         print(f'Epoch: {e+1:02} | Epoch Time: {int(end_t - start_t)}s')
-        print(f'  Train F1: {train_f1:.3f} | Train Acc: {train_acc*100:.2f}%')
-        print(f'   Val. F1: {valid_f1:.3f} |  Val. Acc: {valid_acc*100:.2f}%')
+        print(f'  Train F1: {train_f1:.3f} | Train Acc: {train_acc * 100:.2f}%')
+        print(f'   Val. F1: {valid_f1:.3f} |  Val. Acc: {valid_acc * 100:.2f}%')
 
     rnn.load_state_dict(torch.load(save_path))
     test_acc, test_f1 = evaluate_model(rnn, config, test_iterator, criterion)
