@@ -87,8 +87,8 @@ int GamePlayer::getBestMove(double timeLimit, int opponentLastMove) {
 
     for (int i = 0; i < root->numChildren; i++) {
         Node *child = Node::get(root->children[i]);
-        double score = ucb(child, log(root->totalCount));
-        // double score = (double)child->winCount / child->totalCount;
+        // double score = ucb(child, log(root->totalCount));
+        double score = (double)child->winCount / child->totalCount;
         print("%d: %f, %d\n", child->selection, score, child->totalCount);
 
         if (score > bestScore) {
@@ -237,8 +237,6 @@ GamePlayer::SimulationResult GamePlayer::playCurrentGame(Side lastSide, int last
 
         // Check for must-win situations.
         int mustWinColumn = -1;
-        int midColumn = (columnWidth - 1) / 2;
-        int sumScore = 0;
         int nextStepsCount = 0;
         
         for (int column = 0; column < columnWidth; column++) {
@@ -251,12 +249,7 @@ GamePlayer::SimulationResult GamePlayer::playCurrentGame(Side lastSide, int last
                     break;
                 }
                 // Append to the selection list.
-                nextSteps[nextStepsCount] = column;
-                // Calculate and store the score. Simply prefer the centered ones.
-                int distance = abs(column - midColumn);
-                stepScores[nextStepsCount] = columnWidth - distance;
-                sumScore += stepScores[nextStepsCount];
-                nextStepsCount++;
+                nextSteps[nextStepsCount++] = column;
             }
         }
 
@@ -265,14 +258,8 @@ GamePlayer::SimulationResult GamePlayer::playCurrentGame(Side lastSide, int last
             return lastSide == SELF ? SimulationResult::WIN : SimulationResult::LOSE;
         } else {
             // Select a row randomly base on the scores.
-            int choosenScore = rand() % sumScore;
-
-            do {
-                nextStepsCount--;
-                choosenScore -= stepScores[nextStepsCount];
-            } while (choosenScore > 0);
-
-            lastChoice = nextSteps[nextStepsCount];
+            int choosenIndex = rand() % nextStepsCount;
+            lastChoice = nextSteps[choosenIndex];
 
             myAssert(lastChoice >= 0);
             myAssert(columnAvailable(lastChoice));

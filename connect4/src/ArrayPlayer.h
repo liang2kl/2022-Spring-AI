@@ -5,7 +5,7 @@
 
 class ArrayPlayer: public GamePlayer {
 private:
-    static inline int board[MAX_ROWS][MAX_COLUMNS] = {0};
+    static inline int board[MAX_ROWS][MAX_COLUMNS] = {{0}};
     const int *originalBoard;
     const int *originalTop;
 

@@ -21,8 +21,6 @@ protected:
     inline static int topBuffer[MAX_COLUMNS] = {0};
     /// The buffer used to store available steps.
     inline static int nextSteps[MAX_COLUMNS] = {0};
-    /// The buffer used to store the score of each step.
-    inline static int stepScores[MAX_COLUMNS] = {0};
 
     int rowWidth = -1;
     int columnWidth = -1;
